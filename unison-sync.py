@@ -1,5 +1,16 @@
 #!/usr/bin/env python
 # Python script to automate running unison sync.
+#
+# Put something like this into your ~/.bashrc:
+#
+# # Sync script... replace "apollo" with the name of your laptop.
+# if [ $(hostname -s) == "apollo" ]; then
+#     sync_proc_count=`ps auxww | grep unison-sync.py | grep -vc grep`
+#     if [ $sync_proc_count -eq 0 ]; then
+#         # This makes sure it's only spawned once.
+#         python ${HOME}/Dropbox/unixhome/unison-sync.py >${HOME}/.unison_sync/unison_sync.log 2>&1 &
+#     fi
+# fi
 
 import os
 import sys
