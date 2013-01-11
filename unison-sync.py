@@ -11,6 +11,7 @@ import urlparse
 
 _APPNAME = "unison-sync"
 _UNISONDIR = os.path.join(os.getenv("HOME"), '.unison')
+_UNISONCFG = os.path.join(_UNISONDIR, 'default.prf')
 _CFGDIR = os.path.join(os.getenv("HOME"), '.unison_sync')
 _LOGFILE = os.path.join(_CFGDIR, 'unison_sync.log')
 _CFGFILE = os.path.join(_CFGDIR, 'unison_sync.cfg')
@@ -21,6 +22,43 @@ _logfile = None
 _cfgfile = None
 
 _cfg = {}
+
+def _setupUnison():
+    "Set up Unison configuration."
+    
+    if not os.path.exists(_UNISONDIR):
+        os.mkdir(UNISONDIR)
+    if not os.path.exists(_UNISONCFG):
+        with open(_UNISONCFG, 'wb') as unisoncfg:
+            unisoncfg.write("""
+# Unison preferences file
+ignore = Name .nfs*
+ignore = Name *~
+ignore = Name .*~
+ignore = Name *.tmp
+ignore = Name lock
+ignore = Name Cache
+ignore = Name .cache
+ignore = Name tmp
+ignore = Name temp
+ignore = Name ssh*\@*
+ignore = Name *.iso
+ignore = Name .snapshot
+ignore = Name .unison\*
+
+auto = true
+batch = true
+#silent = true
+#contactquietly = true
+fastcheck = true
+maxthreads = 50
+#terse = true
+addprefsto = default
+
+# turn on ssh compression
+sshargs = -C
+""")
+
 
 def _writeDefaultConfig():
     "Write a default configuration file."
@@ -120,6 +158,7 @@ def main():
     except:
         sys.exit(1)
 
+    _setupUnison()
     _getConfig()
     
     _logfile = open(_LOGFILE, 'a')
