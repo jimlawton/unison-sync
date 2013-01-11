@@ -66,7 +66,7 @@ def _getConfig():
         if _cfg['pairs'][0]['local'].startswith('EDIT_') or _cfg['pairs'][0]['remote'].startswith('EDIT_'):
             print >>sys.stderr, "You must edit the configuration file (%s) and set the fields!" % (_CFGFILE)
             sys.exit(1)
-        _cfg['pairs'][0]['host'] = urlparse.urlparse(_cfg['pairs'][0]['remote']).hostname()
+        _cfg['pairs'][0]['host'] = urlparse.urlparse(_cfg['pairs'][0]['remote']).hostname
 
 
 def _spawn(cmd):
@@ -143,22 +143,26 @@ def main():
         for syncpair in _cfg["pairs"]:
             
             # Check if host is up.
-            if not _spawn('ping -q -c 5 ' + syncpair["host"]) == 0:
+            if _spawn('ping -q -c 5 ' + syncpair["host"]) != 0:
+                _log("Sync host unavailable!")
                 unavail = True
                 continue
 
             if not os.path.exists(syncpair["local"]):
-                _log("Starting initial sync...", gui=True)
+                _log("Initial sync of %s started at %s" % (syncpair['local'], time.asctime()))
+                _log("Initial sync of %s started..." % (syncpair['local']), gui=True)
                 # NOTE: The trailing slash on the remote location is very important!
-                exit_code = _spawn('rsync -raz ' + syncpair["remote"] + "/ " + syncpair["local"])
+                exit_code = _spawn('rsync -raz ' + syncpair['remote'] + "/ " + syncpair['local'])
                 if exit_code != 0:
                     _log("Could not sync! Aborting...", gui=True)
                     sys.exit(1)
+                _log("Initial sync of %s complete at %s" % (syncpair['local'], time.asctime()))
                 _log("Initial sync complete", gui=True)
                 
-                # Run Unison
-                _spawn('unison %s %s -batch -prefer newer -times=true' % (syncpair["local"], syncpair["remote"]))
-                _log("Sync of %s complete at %s" % (syncpair["local"], time.asctime()), gui=True)
+            # Run Unison
+            _log("Sync of %s started at %s" % (syncpair['local'], time.asctime()))
+            _spawn('unison %s %s -batch -prefer newer -times=true' % (syncpair['local'], syncpair['remote']))
+            _log("Sync of %s complete at %s" % (syncpair['local'], time.asctime()), gui=True)
 
         if opts.single:
             break
