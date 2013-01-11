@@ -7,12 +7,15 @@ import time
 import argparse
 import subprocess
 import ConfigParser
+import urlparse
 
 _APPNAME = "unison-sync"
-_UNISONDIR = os.path.join(HOME, '.unison')
+_UNISONDIR = os.path.join(os.getenv("HOME"), '.unison')
 _CFGDIR = os.path.join(os.getenv("HOME"), '.unison_sync')
-_LOGFILE = os.path.join(_CFGDIR, 'unison_sync._log')
-_CFGFILE = os.path.join(_CFGDIR, 'unison_sync._cfg')
+_LOGFILE = os.path.join(_CFGDIR, 'unison_sync.log')
+_CFGFILE = os.path.join(_CFGDIR, 'unison_sync.cfg')
+
+_DEFAULTS = { 'initdelay': 2, 'retry': 30 * 60, 'interval': 120 }
 
 _logfile = None
 _cfgfile = None
@@ -20,24 +23,25 @@ _cfgfile = None
 _cfg = {}
 
 # TODO: Replace these with a config file.
-_cfg["host"] = "saturn.cork.s3group.com"
+#_cfg["host"] = "saturn.cork.s3group.com"
 # List of locations of local and remote locations.
-_cfg["pairs"] = [
-    { "local": "/home/jiml/uhome", "remote": "ssh://%s//home/jiml" % _cfg["host"] }
-]
-
+#_cfg["pairs"] = [
+#    { "local": "/home/jiml/uhome", "remote": "ssh://%s//home/jiml" % _cfg["host"] }
+#]
 
 def _writeDefaultConfig():
     "Write a default configuration file."
-    config = ConfigParser.RawConfigParser()
-    # When adding sections or items, add them in the reverse order of
-    # how you want them to be displayed in the actual file.
-    config.add_section('Pair1')
-    config.set('Pair1', 'remote', 'EDIT_PUT_REMOTE_DIRECTORY_PATH_HERE')
-    config.set('Pair1', 'local', 'EDIT_PUT_LOCAL_DIRECTORY_PATH_HERE')
-    config.set('Pair1', 'host', 'EDIT_PUT_SSH_HOSTNAME_HERE')
     
-    # Writing our configuration file to 'example._cfg'
+    config = ConfigParser.RawConfigParser()
+    
+    config.add_section('General')
+    for key in [ 'initdelay', 'retry', 'interval' ]:
+        config.set('General', key, _DEFAULTS[key])
+    
+    config.add_section('Pair1')
+    config.set('Pair1', 'local', 'EDIT_PUT_LOCAL_DIRECTORY_PATH_HERE')
+    config.set('Pair1', 'remote', 'EDIT_PUT_REMOTE_DIRECTORY_PATH_HERE')
+    
     with open(_CFGFILE, 'wb') as configfile:
         config.write(configfile)
 
@@ -49,20 +53,24 @@ def _getConfig():
     if not os.path.exists(_CFGFILE):
         print "Warning: you must create a configuration file!"
         _writeDefaultConfig()
-        print "A template for you to modify is in %s, please edit it and re-run unison-sync."
+        print "A template for you to modify is in %s, please edit it and re-run unison-sync." % (_CFGFILE)
         sys.exit(1)
     else:
         config = ConfigParser.RawConfigParser()
         config.read(_CFGFILE)
-        _cfg['host'] = config.get('Pair1', 'host')
+        for key in [ 'initdelay', 'retry', 'interval' ]:
+            _cfg[key] = config.getint('General', key)
+        
+        # TODO: Eventually support multiple sync pairs, just one for now.
         _cfg['pairs'] = [ { 'local': config.get('Pair1', 'local'), 'remote': config.get('Pair1', 'remote') } ]
-        if _cfg['host'].startswith('EDIT_') or _cfg['pairs']['local'].startswith('EDIT_') or _cfg['pairs']['remote'].startswith('EDIT_'):
+        if _cfg['pairs'][0]['local'].startswith('EDIT_') or _cfg['pairs'][0]['remote'].startswith('EDIT_'):
             print >>sys.stderr, "You must edit the configuration file (%s) and set the fields!" % (_CFGFILE)
             sys.exit(1)
+        _cfg['pairs'][0]['host'] = urlparse.urlparse(_cfg['pairs'][0]['remote']).hostname()
 
 
 def _spawn(cmd):
-    "Spawn a command, redirecting stdout and stderr to the _logfile."
+    "Spawn a command, redirecting stdout and stderr to the logfile."
 
     status = None
 
@@ -78,7 +86,7 @@ def _spawn(cmd):
 
 
 def _log(msg, gui=False):
-    "Print message to the _logfile, and optionally pop up a GUI notification."
+    "Print message to the logfile, and optionally pop up a GUI notification."
 
     if _logfile:
         print >>_logfile, msg
@@ -99,6 +107,7 @@ def _parseOpts():
     parser.add_argument('-s', '--single',  dest='single',  action='store_true', help='run once only')
     args = parser.parse_args()
     return args
+
 
 def main():
     "Main function."
@@ -126,38 +135,39 @@ def main():
 
     if not opts.single:
         _log("Delaying start for 2 minutes...", gui=True)
-        time.sleep(2 * 60)
+        time.sleep(_cfg['initdelay'])
 
     while 1:
         _log("\n============ %s ============" % time.asctime())
 
-        # Check if host is up.
-        if _spawn('ping -q -c 5 ' + _cfg["synchost"]) == 0:
-            for syncpair in _cfg["pairs"]:
-                if not os.path.exists(syncpair["local"]):
-                    _log("Starting initial sync...", gui=True)
-                    # NOTE: The trailing slash on the remote location is very important!
-                    exit_code = _spawn('rsync -raz ' + syncpair["remote"] + "/ " + syncpair["local"])
-                    if exit_code != 0:
-                        _log("Could not sync! Aborting...", gui=True)
-                        sys.exit(1)
-                    _log("Initial sync complete", gui=True)
+        for syncpair in _cfg["pairs"]:
+            
+            # Check if host is up.
+            if not _spawn('ping -q -c 5 ' + syncpair["host"]) == 0:
+                unavail = True
+                continue
 
-            # Run Unison
-            for syncpair in _cfg["pairs"]:
+            if not os.path.exists(syncpair["local"]):
+                _log("Starting initial sync...", gui=True)
+                # NOTE: The trailing slash on the remote location is very important!
+                exit_code = _spawn('rsync -raz ' + syncpair["remote"] + "/ " + syncpair["local"])
+                if exit_code != 0:
+                    _log("Could not sync! Aborting...", gui=True)
+                    sys.exit(1)
+                _log("Initial sync complete", gui=True)
+                
+                # Run Unison
                 _spawn('unison %s %s -batch -prefer newer -times=true' % (syncpair["local"], syncpair["remote"]))
                 _log("Sync of %s complete at %s" % (syncpair["local"], time.asctime()), gui=True)
-        else:
-            unavail = True
 
         if opts.single:
             break
 
         if unavail:
-            _log("Sync host unavailable! Sleeping for 30 minutes...", gui=True)
-            time.sleep(30 * 60)
+            _log("Sync host unavailable! Sleeping for %d seconds..." % _cfg['retry'], gui=True)
+            time.sleep(_cfg['retry'])
         else:
-            time.sleep(120)
+            time.sleep(_cfg['interval'])
 
 
 if __name__ == '__main__':
