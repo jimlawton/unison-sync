@@ -22,13 +22,6 @@ _cfgfile = None
 
 _cfg = {}
 
-# TODO: Replace these with a config file.
-#_cfg["host"] = "saturn.cork.s3group.com"
-# List of locations of local and remote locations.
-#_cfg["pairs"] = [
-#    { "local": "/home/jiml/uhome", "remote": "ssh://%s//home/jiml" % _cfg["host"] }
-#]
-
 def _writeDefaultConfig():
     "Write a default configuration file."
     
