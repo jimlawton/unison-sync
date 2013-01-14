@@ -204,8 +204,11 @@ def main():
                 
             # Run Unison
             _log("Sync of %s started at %s" % (syncpair['local'], time.asctime()))
-            _spawn('unison %s %s -batch -prefer newer -times=true' % (syncpair['local'], syncpair['remote']))
-            _log("Sync of %s complete at %s" % (syncpair['local'], time.asctime()), gui=True)
+            status = _spawn('unison %s %s -batch -prefer newer -times=true' % (syncpair['local'], syncpair['remote']))
+            if status != 0:
+                _log("Sync of %s failed at %s" % (syncpair['local'], time.asctime()), gui=True)
+            else:
+                _log("Sync of %s complete at %s" % (syncpair['local'], time.asctime()), gui=True)
 
         if opts.single:
             break
