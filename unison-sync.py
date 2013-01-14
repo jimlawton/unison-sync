@@ -180,6 +180,10 @@ def main():
         _log("Delaying start for 2 minutes...", gui=True)
         time.sleep(_cfg['initdelay'])
 
+    if _spawn('ssh-add -l >/dev/null') != 0:
+        _log("ERROR: SSH agent not available, aborting...", gui=True)
+        sys.exit(1)
+
     while 1:
         _log("\n============ %s ============" % time.asctime())
 
