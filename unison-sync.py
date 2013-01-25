@@ -130,7 +130,7 @@ def _spawn(cmd):
     return status
 
 
-def _log(msg, gui=False):
+def _log(msg, gui=False, level='normal'):
     "Print message to the logfile, and optionally pop up a GUI notification."
 
     if _logfile:
@@ -140,7 +140,7 @@ def _log(msg, gui=False):
         print msg
 
     if gui:
-        os.system('notify-send "Unison Sync" "%s"' % msg)
+        os.system('notify-send -u %s "Unison Sync" "%s"' % (level, msg))
 
 
 def _parseOpts():
@@ -184,7 +184,7 @@ def main():
         time.sleep(_cfg['initdelay'])
 
     if _spawn('ssh-add -l >/dev/null') != 0:
-        _log("ERROR: SSH agent not available, aborting...", gui=True)
+        _log("ERROR: SSH agent not available, aborting...", gui=True, level='critical')
         sys.exit(1)
 
     while 1:
@@ -194,7 +194,7 @@ def main():
             
             # Check if host is up.
             if _spawn('ping -q -c 5 ' + syncpair["host"]) != 0:
-                _log("Sync host unavailable!")
+                _log("Sync host unavailable!", gui=True, level='critical')
                 unavail = True
                 continue
 
@@ -204,7 +204,7 @@ def main():
                 # NOTE: The trailing slash on the remote location is very important!
                 exit_code = _spawn('rsync -raz ' + syncpair['remote'] + "/ " + syncpair['local'])
                 if exit_code != 0:
-                    _log("Could not sync! Aborting...", gui=True)
+                    _log("Could not sync! Aborting...", gui=True, level='critical')
                     sys.exit(1)
                 _log("Initial sync of %s complete at %s" % (syncpair['local'], time.asctime()))
                 _log("Initial sync complete", gui=True)
@@ -213,7 +213,7 @@ def main():
             _log("Sync of %s started at %s" % (syncpair['local'], time.asctime()))
             status = _spawn('unison %s %s -batch -prefer newer -times=true' % (syncpair['local'], syncpair['remote']))
             if status != 0:
-                _log("Sync of %s failed at %s" % (syncpair['local'], time.asctime()), gui=True)
+                _log("Sync of %s failed at %s" % (syncpair['local'], time.asctime()), gui=True, level='critical')
             else:
                 _log("Sync of %s complete at %s" % (syncpair['local'], time.asctime()), gui=True)
 
@@ -221,7 +221,7 @@ def main():
             break
 
         if unavail:
-            _log("Sync host unavailable! Sleeping for %d seconds..." % _cfg['retry'], gui=True)
+            _log("Sync host unavailable! Sleeping for %d seconds..." % _cfg['retry'], gui=True, level='critical')
             time.sleep(_cfg['retry'])
         else:
             time.sleep(_cfg['interval'])
