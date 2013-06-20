@@ -41,7 +41,7 @@ def _setupUnison():
     "Set up Unison configuration."
     
     if not os.path.exists(_UNISONDIR):
-        os.mkdir(UNISONDIR)
+        os.mkdir(_UNISONDIR)
     if not os.path.exists(_UNISONCFG):
         with open(_UNISONCFG, 'wb') as unisoncfg:
             unisoncfg.write("""
@@ -107,7 +107,7 @@ def _getConfig():
             _cfg[key] = config.getint('General', key)
         
         # TODO: Eventually support multiple sync pairs, just one for now.
-        _cfg['pairs'] = [ { 'local': config.get('Pair1', 'local'), 'remote': config.get('Pair1', 'remote') } ]
+        _cfg['pairs'] = [ { 'local': config.get('Pair1', 'local'), 'remote': config.get('Pair1', 'remote'), 'rsync': config.get('Pair1', 'rsync') } ]
         if _cfg['pairs'][0]['local'].startswith('EDIT_') or _cfg['pairs'][0]['remote'].startswith('EDIT_'):
             print >>sys.stderr, "You must edit the configuration file (%s) and set the fields!" % (_CFGFILE)
             sys.exit(1)
@@ -202,7 +202,7 @@ def main():
                 _log("Initial sync of %s started at %s" % (syncpair['local'], time.asctime()))
                 _log("Initial sync of %s started..." % (syncpair['local']), gui=True)
                 # NOTE: The trailing slash on the remote location is very important!
-                exit_code = _spawn('rsync -raz ' + syncpair['remote'] + "/ " + syncpair['local'])
+                exit_code = _spawn('rsync -raz ' + syncpair['rsync'] + "/ " + syncpair['local'])
                 if exit_code != 0:
                     _log("Could not sync! Aborting...", gui=True, level='critical')
                     sys.exit(1)
