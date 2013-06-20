@@ -54,16 +54,24 @@ ignore = Name lock
 ignore = Name Cache
 ignore = Name .cache
 ignore = Name tmp
+ignore = Name .tmp
 ignore = Name temp
 ignore = Name ssh*\@*
 ignore = Name *.iso
 ignore = Name .snapshot
-ignore = Name .unison\*
+ignore = Name .lastpass
+ignore = Name .unison
+ignore = Name .xsession-errors
+ignore = Name .history
+ignore = Name .Skype
+
+# Ignore all Tbird summary files.
+ignore = Regex \.thunderbird/.*\.msf
 
 auto = true
 batch = true
 #silent = true
-#contactquietly = true
+contactquietly = true
 fastcheck = true
 maxthreads = 50
 #terse = true
