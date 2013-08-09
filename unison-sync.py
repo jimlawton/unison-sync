@@ -64,6 +64,8 @@ ignore = Name .unison
 ignore = Name .xsession-errors
 ignore = Name .history
 ignore = Name .Skype
+ignore = Name .dropbox
+ignore = Name .beyondcompare
 
 # Ignore all Tbird summary files.
 ignore = Regex \.thunderbird/.*\.msf
