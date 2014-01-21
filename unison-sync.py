@@ -195,8 +195,9 @@ def main():
     unavail = False
 
     if not opts.single:
-        _log("Delaying start for 2 minutes...", gui=True)
-        time.sleep(_cfg['initdelay'])
+        if "initdelay" in _cfg.keys():
+            _log("Delaying start for %d seconds..." % _cfg['initdelay'], gui=True)
+            time.sleep(_cfg['initdelay'])
 
     if _spawn('ssh-add -l >/dev/null') != 0:
         _log("ERROR: SSH agent not available, aborting...", gui=True, level='critical')
