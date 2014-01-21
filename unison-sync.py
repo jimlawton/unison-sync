@@ -117,7 +117,10 @@ def _getConfig():
             _cfg[key] = config.getint('General', key)
         
         # TODO: Eventually support multiple sync pairs, just one for now.
-        _cfg['pairs'] = [ { 'local': config.get('Pair1', 'local'), 'remote': config.get('Pair1', 'remote'), 'rsync': config.get('Pair1', 'rsync') } ]
+        try:
+            _cfg['pairs'] = [ { 'local': config.get('Pair1', 'local'), 'remote': config.get('Pair1', 'remote'), 'rsync': config.get('Pair1', 'rsync') } ]
+        except:
+            _cfg['pairs'] = [ { 'local': config.get('Pair1', 'local'), 'remote': config.get('Pair1', 'remote') } ]
         if _cfg['pairs'][0]['local'].startswith('EDIT_') or _cfg['pairs'][0]['remote'].startswith('EDIT_'):
             print >>sys.stderr, "You must edit the configuration file (%s) and set the fields!" % (_CFGFILE)
             sys.exit(1)
@@ -203,7 +206,6 @@ def main():
         _log("\n============ %s ============" % time.asctime())
 
         for syncpair in _cfg["pairs"]:
-            
             # Check if host is up.
             if _spawn('ping -q -c 5 ' + syncpair["host"]) != 0:
                 _log("Sync host unavailable!", gui=True, level='critical')
@@ -211,6 +213,11 @@ def main():
                 continue
 
             if not os.path.exists(syncpair["local"]):
+                # First time.
+                if "rsync" not in syncpair.keys():
+                    _log("rsync option not specified in configuration file!", level='critical')
+                    _log("rsync option not specified in configuration file!", gui=True, level='critical')
+                    sys.exit(1)
                 _log("Initial sync of %s started at %s" % (syncpair['local'], time.asctime()))
                 _log("Initial sync of %s started..." % (syncpair['local']), gui=True)
                 # NOTE: The trailing slash on the remote location is very important!
@@ -220,13 +227,15 @@ def main():
                     sys.exit(1)
                 _log("Initial sync of %s complete at %s" % (syncpair['local'], time.asctime()))
                 _log("Initial sync complete", gui=True)
-                
+
             # Run Unison
             _log("Sync of %s started at %s" % (syncpair['local'], time.asctime()))
             status = _spawn('unison %s %s -batch -prefer newer -times=true' % (syncpair['local'], syncpair['remote']))
             if status != 0:
-                _log("Sync of %s failed at %s" % (syncpair['local'], time.asctime()), gui=True, level='critical')
+                _log("Sync of %s failed" % (syncpair['local']), gui=True, level='critical')
+                _log("Sync of %s failed at %s" % (syncpair['local'], time.asctime()), level='critical')
             else:
+                _log("Sync of %s complete" % (syncpair['local']), gui=True)
                 _log("Sync of %s complete at %s" % (syncpair['local'], time.asctime()), gui=True)
 
         if opts.single:
