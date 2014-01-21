@@ -96,6 +96,7 @@ def _writeDefaultConfig():
     config.add_section('Pair1')
     config.set('Pair1', 'local', 'EDIT_PUT_LOCAL_DIRECTORY_PATH_HERE')
     config.set('Pair1', 'remote', 'EDIT_PUT_REMOTE_DIRECTORY_PATH_HERE')
+    config.set('Pair1', 'rsync', 'EDIT_PUT_INITIAL_RSYNC_DIRECTORY_PATH_HERE')
     
     with open(_CFGFILE, 'wb') as configfile:
         config.write(configfile)
@@ -195,7 +196,7 @@ def main():
     unavail = False
 
     if not opts.single:
-        if "initdelay" in _cfg.keys():
+        if "initdelay" in _cfg.keys() and _cfg['initdelay'] > 0:
             _log("Delaying start for %d seconds..." % _cfg['initdelay'], gui=True)
             time.sleep(_cfg['initdelay'])
 
