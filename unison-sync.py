@@ -154,8 +154,6 @@ def _log(msg, gui=False, level='normal'):
         print msg
 
     if gui:
-        if level == "critical":
-            msg = "<font size=16 color=red><b><i>%s</b></i></font>" % msg
         os.system('notify-send -u %s "Unison Sync" "%s"' % (level, msg))
 
 
